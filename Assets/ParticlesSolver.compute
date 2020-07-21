@@ -1,0 +1,142 @@
+﻿#pragma kernel Update
+#pragma kernel emitter
+//using UnityEngine;
+//struct Particle
+//{
+//	float4 initialPosition;
+//	float4 initialVelocity;
+//	float4 position;
+//	float4 velocity;
+//	float4 color;
+//	float2 massAndSize;
+//	float2 ageAndlife;
+//	uint shuffleID;     // ???
+//	float subResidual;    //
+//	float2 padding;
+//};
+
+float4 cbStartColor;
+float4 cbEndColor;
+float cbStartSize;
+float cbEndSize;
+int cbParticlesStorage;
+float cbLifeDecay;              //
+//float4 EmitterVelocityAndMass;
+float4 EmitterPosition;
+//float4 EmitterScale;
+
+struct Particle {
+	float4 position;
+	float4 color;
+	float4 initialPosition;
+	float4 initialVelocity;
+	
+	float4 velocity;
+	
+	//float4 ambient;
+	//float2 massAndSize;
+	float2 ageAndlife;
+	float psize;
+	//int ShuffleID;                   //??
+	//float subResidual;
+	//float2 padding;
+};
+
+float dt;
+int count;
+//int offset;
+RWStructuredBuffer<Particle> Particles;
+//RWStructuredBuffer<Particle> outParticles;
+float hash(int n) {
+	return frac(n*17.0*frac(n*0.3183099));
+}
+float3 UniformSinRandom(float3 x)
+{
+	return frac(sin(x) * 15973.3467);
+}
+float SmoothStepC1(float t) {
+	return clamp(t*t*t*(3 - 2 * t), 0, 1);
+}
+[numthreads(256,1,1)]
+void Update(uint3 id : SV_DispatchThreadID)
+{
+	//SV_DispatchThreadID对应gl_GlobalInvocationID
+	
+	//if (Particles[id.x].life > 0) {
+	//	float2 v = float2(Particles[id.x].position.x- mousePosition.x, Particles[id.x].position.y- mousePosition.y);
+	//	//float d2 = v.x * v.x + v.y * v.y;
+	//	Particles[id.x].velocity = Particles[id.x].velocity + 5*(v) * dt;
+	//	//Particles[id.x].velocity = Particles[id.x].velocity + float2(1, 1);
+	//	Particles[id.x].life -= dt;
+	//	Particles[id.x].position = Particles[id.x].position + Particles[id.x].velocity * dt;
+	//}
+	//else {
+	//	float t = 2 * hash(id.x)-1;
+	//	float a = 2 * hash(t*id.x) - 1;
+	//	Particles[id.x].velocity = float2(t, a);
+	//	Particles[id.x].life = hash(id.x)+1.f;
+	//	Particles[id.x].position = float2( 0.0f,0.0f );
+	//	int shufflId=Particles
+	//}
+//	if (id.x < cbParticlesStorage) {
+		if (Particles[id.x].ageAndlife.x< Particles[id.x].ageAndlife.y) {
+			Particles[id.x].ageAndlife.x += cbLifeDecay*dt;
+			//if(Particles[id.x].ageAndLife.x)
+		}
+		else {
+			Particles[id.x].ageAndlife.x = hash(id.x);
+			//Particles[id.x].ageAndlife.y = 1.0 + hash(id.x);
+			Particles[id.x].velocity = Particles[id.x].initialVelocity;
+			Particles[id.x].position = Particles[id.x].initialPosition;
+			return;
+		}
+		float Interlop = SmoothStepC1(1 - Particles[id.x].ageAndlife.x / Particles[id.x].ageAndlife.y);
+		//particles[id.x].massAndSize.y = lerp(cbStartSize, cbEndSize, Interlop);
+		Particles[id.x].color = lerp(cbStartColor, cbEndColor, Interlop);//*particle.ambient;
+		Particles[id.x].psize = lerp(cbStartSize, cbEndSize, Interlop);
+		//Particles[id.x].color = float4(1, 1, 1, 1);
+		float3 noiseVelocity = float3(0,0,0);
+		float3 combineForce = float3(0,0,0);
+
+		//for(int i=0;i<num)
+		float3 dir = Particles[id.x].position.xyz - float3(0,0,0);
+		float distanceToForceCenter = length(dir);
+		dir = dir / distanceToForceCenter;
+		// radius=5
+		//float decay = clamp(1 - distanceToForceCenter / 5.0, 0, 1);
+		//decay = decay == 0 ? 0 : exp(log(decay))*0.05; //forcedecay
+		//float3 strength 当作是float3(1,1,1)
+		combineForce += dir;
+		Particles[id.x].velocity.xyz += combineForce*dt;
+		Particles[id.x].position.xyz += Particles[id.x].velocity.xyz*dt + noiseVelocity * dt;
+		//Particles[id.x].position.xyz += float3(1, 1, 1);
+//	}
+}
+[numthreads(256, 1, 1)]
+void emitter(uint3 id : SV_DispatchThreadID)
+{
+	//int amounts = id.x + offset;                     //id.x*256 + offset;
+	//int Global = amounts;
+	//if (id.x < count && amounts < cbParticlesStorage) {
+	float seed = id.x / (float)cbParticlesStorage;
+
+	float3 valueNoise;
+	valueNoise = UniformSinRandom(float3(seed, 2.*seed, 3.*seed));
+	Particles[id.x].initialVelocity = float4(valueNoise, 1.0);
+	Particles[id.x].velocity = Particles[id.x].initialVelocity;
+	//position
+	//Particles[id.x].position = float4(EmitterPosition.xyz + valueNoise,1.0); //* EmitterScale;
+	Particles[id.x].position = EmitterPosition;
+	Particles[id.x].initialPosition = Particles[id.x].position;
+	//Particles[id.x].position = float4(0, 0, 0, 1);
+	//color
+	//Particles[id.x].ambient = float4(1, 1, 1, 1);
+	Particles[id.x].ageAndlife.x = hash(id.x);
+	Particles[id.x].ageAndlife.y = 1.0;//+ hash(id.x);
+	//Particles[id.x].color = float4(1.0, 0.0, 0.0, 1.0);
+	Particles[id.x].color = cbStartColor;
+	Particles[id.x].psize = cbStartSize;
+	//Particles[id.x].color = lerp(cbStartColor, cbEndColor, ageAndlife.x / ageAndlife.y);
+	//Particles[id.x].psize = lerp(cbStartSize, cbEndSize, ageAndlife.x/ ageAndlife.y);
+	//}
+}

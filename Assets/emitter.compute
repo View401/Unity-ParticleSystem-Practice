@@ -1,0 +1,62 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel emitter
+
+float4 cbStartColor;
+float4 cbEndColor;
+float cbStartSize;
+float cbEndSize;
+int cbParticlesStorage;
+int cbLifeDecay;
+float4 EmitterVelocityAndMass;
+float4 EmitterPosition;
+float4 EmitterScale;
+
+
+struct Particle{
+	float4 initialPosition;
+	float4 initialVelocity;
+	float4 position;
+	float4 velocity;
+	float4 color;
+	float4 ambient;
+	//float2 massAndSize;
+	float2 ageAndlife;
+	//int ShuffleID;                   //??
+	//float subResidual;
+	//float2 padding;
+};
+
+int count;
+//int offset;
+RWStructuredBuffer<Particle> Particles;
+
+
+float3 UniformSinRandom(float3 x)
+{
+	return frac(sin(x) * 15973.3467);
+}
+float hash(int n) {
+	return frac(n*17.0*frac(n*0.3183099));
+}
+[numthreads(256,1,1)]
+void emitter(uint3 id : SV_DispatchThreadID)
+{
+	//int amounts = id.x + offset;                     //id.x*256 + offset;
+	//int Global = amounts;
+	//if (id.x < count && amounts < cbParticlesStorage) {
+		float seed = id.x / (float)cbParticlesStorage;
+
+		float3 valueNoise;
+		valueNoise = UniformSinRandom(float3(seed, 2.*seed, 3.*seed));
+		Particles[id.x].initialVelocity = float4(valueNoise,1.0);
+		Particles[id.x].velocity = Particles[id.x].initialVelocity;
+		//position
+		Particles[id.x].position.xyz = EmitterPosition.xyz + valueNoise * EmitterScale;
+		Particles[id.x].initialPosition = Particles[id.x].position;
+		//color
+		Particles[id.x].ambient = float4(1, 1, 1, 1);
+
+		Particles[id.x].ageAndlife = 1.0 + hash(id.x);
+
+	//}
+}
