@@ -48,7 +48,7 @@ Shader "Subway/Particles"
 
 			};
 			struct appdata {
-				float4 vector:POSITION;
+				float4 vertex:POSITION;
 			};
             // Pixel shader input
             struct PS_INPUT
@@ -62,19 +62,20 @@ Shader "Subway/Particles"
 				//float4 ambient:TEXCOORD3;
 				//float2 ageAndlife:TEXCOORD4;
             };
+			float _size;
 			float4x4 GetModelToWorldMatrix(float3 pos)
 			{
 				float4x4 transformMatrix = float4x4(
-					_Size, 0, 0, pos.x,
-					0, _Size, 0, pos.y,
-					0, 0, _Size, pos.z,
+					_size, 0, 0, pos.x,
+					0, _size, 0, pos.y,
+					0, 0, _size, pos.z,
 					0, 0, 0, 1
 					);
 				return transformMatrix;
 			}
             // Particle's data, shared with the compute shader
             StructuredBuffer<particleCacheProperty> Particles;
-            float _size;
+            
             // Properties variables
             /*uniform float4 cbStartColor;
             uniform float4 cbEndColor;
