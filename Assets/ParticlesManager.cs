@@ -10,10 +10,7 @@ public class ParticlesManager : MonoBehaviour {
         public Vector4 color;
         public Vector4 initialPosition;
         public Vector4 initialVelocity;
-        
         public Vector4 velocity;
-        
-        //public Vector4 ambient;
         public Vector2 ageAndlife;
         public float psize;
     };
@@ -22,12 +19,13 @@ public class ParticlesManager : MonoBehaviour {
     public Material material;
     [SerializeField]
     public Mesh instanceMesh;
-
-    ComputeBuffer particles;
+    [Range(0.01f, 10f)]
+    public float startSize = 3.3f;
+    ComputeBuffer particles,argsBuffer;
 
     const int WARP_SIZE = 256;
 
-    int size = 2560;
+    public int size = 2560;
     int stride;
 
     int warpCount;
@@ -35,7 +33,7 @@ public class ParticlesManager : MonoBehaviour {
     int kernelIndex;
     int kernelIndexUpdate;
     Particle[] initBuffer;
-
+    uint[] _args = new uint[5] { 0, 0, 0, 0, 0 };
     // Use this for initialization
     void Start () {
 
@@ -43,7 +41,7 @@ public class ParticlesManager : MonoBehaviour {
 
         stride = Marshal.SizeOf(typeof(Particle));
         particles = new ComputeBuffer(size, stride);
-
+        argsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
         initBuffer = new Particle[size];
         //    //initBuffer[i].position = Random.insideUnitCircle * 10f;
 
@@ -71,7 +69,7 @@ public class ParticlesManager : MonoBehaviour {
         computeShader.SetBuffer(kernelIndexUpdate, "Particles", particles);
         
         computeShader.SetFloats("cbStartColor",new float[]{ 0.0f, 0.0f, 0.5f, 1.0f});
-        computeShader.SetFloats("cbEndColor", new float[]{ 1f, 0f, 0f, 1f});
+        computeShader.SetFloats("cbEndColor", new float[]{ 0f, 1f, 0f, 1f});
         computeShader.SetFloat("cbStartSize", 2.5f);
         computeShader.SetFloat("cbEndSize", 0.5f);
         computeShader.SetInt("cbParticlesStorage", size);
@@ -82,34 +80,20 @@ public class ParticlesManager : MonoBehaviour {
         //Debug.Log("kernelIndexUpdate:" + kernelIndexUpdate);
         computeShader.Dispatch(kernelIndex, warpCount, 1, 1);
         material.SetBuffer("Particles", particles);
-
+        material.SetFloat("_size", startSize);
     }
 	
 	// Update is called once per frame
 	void Update () {
 
-        //if (Input.GetKeyDown(KeyCode.R))
-        //{
-        //    particles.SetData(initBuffer);
-        //}
-        //computeShader.SetInt("shouldMove", Input.GetMouseButton(0) ? 1 : 0);
-        //for(int i = 0; i < size; i++)
-        //{
-        //    if (particles[i].life < 0)
-        //    {
-        //        initBuffer[i].position = Vector2.zero;
-        //        initBuffer[i].velocity = Random.insideUnitCircle;
-        //        initBuffer[i].life = 1.0f;
-        //    }
-        //}
-        //var mousePosition = GetMousePosition();
-        //computeShader.SetFloats("mousePosition", mousePosition);
-        //computeShader.SetBuffer(kernelIndexUpdate, "Particles", particles);
-
         computeShader.SetFloat("dt", Time.deltaTime);
         computeShader.Dispatch(kernelIndexUpdate, warpCount, 1, 1);
-        //Graphics.DrawProceduralNow(MeshTopology.Points, 1, size);
-        //Graphics.DrawMeshInstancedIndirect(instanceMesh, 0, material, new Bounds(Vector3.zero,new Vector3(100f,100f,100f)),particles);
+        _args[0] = (uint)instanceMesh.GetIndexCount(0);
+        _args[1] = (uint)size;
+        _args[2] = (uint)instanceMesh.GetIndexStart(0);
+        _args[3] = (uint)instanceMesh.GetBaseVertex(0);
+        argsBuffer.SetData(_args);
+        Graphics.DrawMeshInstancedIndirect(instanceMesh, 0, material, new Bounds(Vector3.zero,new Vector3(100f,100f,100f)),argsBuffer);
     }
 
     //float[] GetMousePosition()
@@ -122,13 +106,15 @@ public class ParticlesManager : MonoBehaviour {
     void OnRenderObject()
     {
         material.SetPass(0);
-        Graphics.DrawProceduralNow(MeshTopology.Points, 1, size);
-        //Graphics.DrawMeshInstancedIndirect(instanceMesh, 0, material, new Bounds(Vector3.zero, new Vector3(100f, 100f, 100f)), particles);
+        //Graphics.DrawProceduralNow(MeshTopology.Points, 1, size);
+        //Graphics.DrawMeshInstancedIndirect(instanceMesh, 0, material, new Bounds(Vector3.zero, new Vector3(100f, 100f, 100f)), argsBuffer);
     }
 
     void OnDestroy()
     {
         if (particles != null)
             particles.Release();
+        if (argsBuffer != null)
+            argsBuffer.Release();
     }
 }

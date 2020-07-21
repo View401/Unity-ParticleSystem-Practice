@@ -63,7 +63,7 @@ Shader "Subway/Particles"
 
             // Particle's data, shared with the compute shader
             StructuredBuffer<particleCacheProperty> Particles;
-
+            float _size;
             // Properties variables
             /*uniform float4 cbStartColor;
             uniform float4 cbEndColor;
