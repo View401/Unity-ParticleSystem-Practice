@@ -47,7 +47,9 @@ Shader "Subway/Particles"
 				//float2 padding;
 
 			};
-
+			struct appdata {
+				float4 vector:POSITION;
+			};
             // Pixel shader input
             struct PS_INPUT
             {
@@ -60,7 +62,16 @@ Shader "Subway/Particles"
 				//float4 ambient:TEXCOORD3;
 				//float2 ageAndlife:TEXCOORD4;
             };
-
+			float4x4 GetModelToWorldMatrix(float3 pos)
+			{
+				float4x4 transformMatrix = float4x4(
+					_Size, 0, 0, pos.x,
+					0, _Size, 0, pos.y,
+					0, 0, _Size, pos.z,
+					0, 0, 0, 1
+					);
+				return transformMatrix;
+			}
             // Particle's data, shared with the compute shader
             StructuredBuffer<particleCacheProperty> Particles;
             float _size;
@@ -73,7 +84,7 @@ Shader "Subway/Particles"
 			uniform float cbLifeDecay;*/
 
             // Vertex shader
-            PS_INPUT vert(uint vertex_id : SV_VertexID, uint instance_id : SV_InstanceID)
+            PS_INPUT vert(appdata v, uint instance_id : SV_InstanceID)
             {
 				PS_INPUT o = (PS_INPUT)0;
 
@@ -82,8 +93,10 @@ Shader "Subway/Particles"
                 //float lerpValue = clamp(speed / _HighSpeedValue, 0.0f, 1.0f);
                 o.color = Particles[instance_id].color;
                 // Position
-                o.position = UnityObjectToClipPos(float4(Particles[instance_id].position.xyz,1.0));
-				o.size = Particles[instance_id].psize;
+                //o.position = UnityObjectToClipPos(float4(Particles[instance_id].position.xyz,1.0));
+				float4x4 WorldMatrix = GetModelToWorldMatrix(Particles[instance_id].position.xyz);
+				v.vertex = mul(WorldMatrix, v.vertex);
+				o.position = mul(UNITY_MATRIX_VP, v.vertex);
 				//o.initialVelocity = Particles[instance_id].initialVelocity;
 				//o.initialPosition = Particles[instance_id].initialPosition;
 

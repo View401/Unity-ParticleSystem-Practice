@@ -19,8 +19,8 @@ public class ParticlesManager : MonoBehaviour {
     public Material material;
     [SerializeField]
     public Mesh instanceMesh;
-    [Range(0.01f, 10f)]
-    public float startSize = 3.3f;
+    [Range(0.001f, 10f)]
+    public float startSize = 0.001f;
     ComputeBuffer particles,argsBuffer;
 
     const int WARP_SIZE = 256;
@@ -80,13 +80,14 @@ public class ParticlesManager : MonoBehaviour {
         //Debug.Log("kernelIndexUpdate:" + kernelIndexUpdate);
         computeShader.Dispatch(kernelIndex, warpCount, 1, 1);
         material.SetBuffer("Particles", particles);
-        material.SetFloat("_size", startSize);
+        
     }
 	
 	// Update is called once per frame
 	void Update () {
 
         computeShader.SetFloat("dt", Time.deltaTime);
+        material.SetFloat("_size", startSize);
         computeShader.Dispatch(kernelIndexUpdate, warpCount, 1, 1);
         _args[0] = (uint)instanceMesh.GetIndexCount(0);
         _args[1] = (uint)size;
