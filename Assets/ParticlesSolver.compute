@@ -1,19 +1,5 @@
 ﻿#pragma kernel Update
 #pragma kernel emitter
-//using UnityEngine;
-//struct Particle
-//{
-//	float4 initialPosition;
-//	float4 initialVelocity;
-//	float4 position;
-//	float4 velocity;
-//	float4 color;
-//	float2 massAndSize;
-//	float2 ageAndlife;
-//	uint shuffleID;     // ???
-//	float subResidual;    //
-//	float2 padding;
-//};
 
 float4 cbStartColor;
 float4 cbEndColor;
@@ -87,7 +73,7 @@ void Update(uint3 id : SV_DispatchThreadID)
 			Particles[id.x].ageAndlife.x = hash(id.x);
 			//Particles[id.x].ageAndlife.y = 1.0 + hash(id.x);
 			Particles[id.x].velocity = Particles[id.x].initialVelocity;
-			Particles[id.x].position = Particles[id.x].initialPosition;
+			Particles[id.x].position = EmitterPosition;
 			return;
 		}
 		float Interlop = SmoothStepC1(1 - Particles[id.x].ageAndlife.x / Particles[id.x].ageAndlife.y);
