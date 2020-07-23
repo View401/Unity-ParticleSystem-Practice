@@ -75,14 +75,6 @@ Shader "Subway/Particles"
 			}
             // Particle's data, shared with the compute shader
             StructuredBuffer<particleCacheProperty> Particles;
-            
-            // Properties variables
-            /*uniform float4 cbStartColor;
-            uniform float4 cbEndColor;
-            uniform float cbStartSize;
-			uniform float cbEndSize;
-			uniform float cbParticlesStorage;
-			uniform float cbLifeDecay;*/
 
             // Vertex shader
             PS_INPUT vert(appdata v, uint instance_id : SV_InstanceID)
@@ -95,6 +87,7 @@ Shader "Subway/Particles"
                 o.color = Particles[instance_id].color;
                 // Position
                 //o.position = UnityObjectToClipPos(float4(Particles[instance_id].position.xyz,1.0));
+				_size = Particles[instance_id].psize;
 				float4x4 WorldMatrix = GetModelToWorldMatrix(Particles[instance_id].position.xyz);
 				v.vertex = mul(WorldMatrix, v.vertex);
 				o.position = mul(UNITY_MATRIX_VP, v.vertex);

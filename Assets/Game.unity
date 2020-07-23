@@ -156,6 +156,7 @@ MonoBehaviour:
   startSize: 0.01
   startColor: {r: 0, g: 0, b: 0, a: 0}
   endColor: {r: 0, g: 0, b: 0, a: 0}
+  gravity: 0.5
   size: 2560
 --- !u!4 &770804763
 Transform:
