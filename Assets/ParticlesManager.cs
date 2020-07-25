@@ -42,6 +42,9 @@ public class ParticlesManager : MonoBehaviour {
     int kernelIndex;
     int kernelIndexUpdate;
     int cbParticlesStorage;
+    float initduration;
+    float emitterPerSec;
+    float residuals;
     uint[] _args = new uint[5] { 0, 0, 0, 0, 0 };
     // Use this for initialization
     void Start () {
@@ -56,6 +59,7 @@ public class ParticlesManager : MonoBehaviour {
         startSpeed = 1;
         lifeDecay = 1;
         duration = 5;
+        residuals=0;
         cbParticlesStorage = size;
 
         particles = new ComputeBuffer(size, stride);
@@ -72,15 +76,12 @@ public class ParticlesManager : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        if (size != cbParticlesStorage)
-        {
-            cbParticlesStorage = size;
-            particleCount = 0;
-            particles = new ComputeBuffer(size, stride);
-            particleCount = 0;
-        }
-
+        emitterPerSec = size / duration;
         float dt = Time.deltaTime;
+        residuals += dt * emitterPerSec;
+        int newPaticles = (int)residuals;
+        residuals -= newPaticles;
+
         computeShader.SetFloat("dt", dt);
         computeShader.SetInt("idx", particleCount);
         computeShader.SetFloats("EmitterPosition", new float[] { transform.position.x, transform.position.y, transform.position.z, 1f });
@@ -91,14 +92,15 @@ public class ParticlesManager : MonoBehaviour {
         computeShader.SetFloat("cbStartSize", startSize);
         computeShader.SetFloats("forceCenter", forceCenter);
         computeShader.SetFloat("cbLifeDecay", lifeDecay);
-        computeShader.SetFloat("duration", duration);
+        computeShader.SetFloat("duration", duration);            //重新发射
         computeShader.SetInt("cbParticlesStorage", cbParticlesStorage);
         computeShader.SetBuffer(kernelIndex, "Particles", particles);
         computeShader.SetBuffer(kernelIndexUpdate, "Particles", particles);
         
         if (particleCount < size)
         {
-            WARP_SIZE = Math.Min(Mathf.CeilToInt(0.003f / duration * size),size-particleCount);
+            //WARP_SIZE = Math.Min(Mathf.CeilToInt(dt / duration * size),size-particleCount);
+            WARP_SIZE = newPaticles;
             particleCount += WARP_SIZE;
             warpCount = Mathf.CeilToInt(WARP_SIZE / 256.0f);
             computeShader.SetFloat("count", particleCount);

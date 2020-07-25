@@ -33,7 +33,7 @@ struct Particle {
 
 float dt;
 int count;
-int idx;
+int lastUseedParticle ;
 //int offset;
 RWStructuredBuffer<Particle> Particles;
 //RWStructuredBuffer<Particle> outParticles;
@@ -88,8 +88,11 @@ void Update(uint3 id : SV_DispatchThreadID)
 [numthreads(256, 1, 1)]
 void emitter(uint3 id : SV_DispatchThreadID)
 {
-	int _ID = idx + id.x;
-	if (_ID < count) {
+	int idx = (lastUseedParticle+id.x)% cbParticlesStorage;
+	if (Particles[idx].ageAndlife.x <= 0.0f) {
+		
+	}
+	if (idx < count) {
 		float seed = _ID / (float)cbParticlesStorage;
 		float3 valueNoise;
 		valueNoise = UniformSinRandom(float3(seed, 0, seed * 2));
