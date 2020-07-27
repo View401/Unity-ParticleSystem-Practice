@@ -41,7 +41,8 @@ public class ParticlesManager : MonoBehaviour {
     int particleCount=0;
     int kernelIndex;
     int kernelIndexUpdate;
-    int cbParticlesStorage;
+    int lastUsedParticle;
+    int initSize;
     float initduration;
     float emitterPerSec;
     float residuals;
@@ -49,19 +50,20 @@ public class ParticlesManager : MonoBehaviour {
     // Use this for initialization
     void Start () {
 
-        warpCount = Mathf.CeilToInt((float)size / WARP_SIZE);
+        //warpCount = Mathf.CeilToInt((float)size / WARP_SIZE);
 
         stride = Marshal.SizeOf(typeof(Particle));
         startColor = new Color(0,0,1,1);
         endColor = Color.red;
         size = 2560;
+        initSize = size;
         gravity = 0.5f;
         startSpeed = 1;
         lifeDecay = 1;
         duration = 5;
         residuals=0;
-        cbParticlesStorage = size;
-
+        lastUsedParticle = 0;
+        particleCount = 0;
         particles = new ComputeBuffer(size, stride);
         argsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
 
@@ -76,14 +78,22 @@ public class ParticlesManager : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        emitterPerSec = size / duration;
+        if (size != initSize)
+        {
+            initSize = size;
+            particles = new ComputeBuffer(size, stride);
+            lastUsedParticle = 0;
+            particleCount = 0;
+            residuals = 0;
+        }
+        computeShader.SetInt("lastUsedParticle", lastUsedParticle);
+        emitterPerSec = size / duration*lifeDecay;
         float dt = Time.deltaTime;
         residuals += dt * emitterPerSec;
-        int newPaticles = (int)residuals;
+        int newPaticles = Mathf.FloorToInt(residuals);
         residuals -= newPaticles;
-
+        Debug.Log(newPaticles);
         computeShader.SetFloat("dt", dt);
-        computeShader.SetInt("idx", particleCount);
         computeShader.SetFloats("EmitterPosition", new float[] { transform.position.x, transform.position.y, transform.position.z, 1f });
         computeShader.SetFloat("gravity", gravity);
         computeShader.SetFloat("startSpeed", startSpeed);
@@ -93,24 +103,29 @@ public class ParticlesManager : MonoBehaviour {
         computeShader.SetFloats("forceCenter", forceCenter);
         computeShader.SetFloat("cbLifeDecay", lifeDecay);
         computeShader.SetFloat("duration", duration);            //重新发射
-        computeShader.SetInt("cbParticlesStorage", cbParticlesStorage);
+        
+        computeShader.SetInt("count", newPaticles);
         computeShader.SetBuffer(kernelIndex, "Particles", particles);
         computeShader.SetBuffer(kernelIndexUpdate, "Particles", particles);
         
-        if (particleCount < size)
-        {
-            //WARP_SIZE = Math.Min(Mathf.CeilToInt(dt / duration * size),size-particleCount);
-            WARP_SIZE = newPaticles;
-            particleCount += WARP_SIZE;
-            warpCount = Mathf.CeilToInt(WARP_SIZE / 256.0f);
-            computeShader.SetFloat("count", particleCount);
+        if (newPaticles > 0) {
+            if (particleCount < size)
+            {
+                particleCount += Mathf.Min(newPaticles,size-particleCount);
+            }
+            Debug.Log("lastUsedParticles:" + lastUsedParticle);
+            lastUsedParticle = (lastUsedParticle + newPaticles ) % size;
+            
+            warpCount = Mathf.CeilToInt(newPaticles / 256.0f);
             computeShader.Dispatch(kernelIndex, warpCount, 1, 1);
         }
+
         Debug.Log(dt);
         Debug.Log(particleCount);
         warpCount = Mathf.CeilToInt(particleCount / 256.0f);
-        Debug.Log(warpCount);
-        computeShader.Dispatch(kernelIndexUpdate, warpCount, 1, 1);
+        computeShader.SetInt("cbParticlesStorage", particleCount);
+        if(particleCount>0)
+            computeShader.Dispatch(kernelIndexUpdate, warpCount, 1, 1);
         _args[0] = (uint)instanceMesh.GetIndexCount(0);
         _args[1] = (uint)particleCount;
         _args[2] = (uint)instanceMesh.GetIndexStart(0);

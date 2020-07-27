@@ -1,5 +1,6 @@
 ﻿#pragma kernel Update
 #pragma kernel emitter
+#pragma kernel blur
 #include "CgIncludes/SimplexNoise3D.cginc"
 float4 cbStartColor;
 float4 cbEndColor;
@@ -32,9 +33,9 @@ struct Particle {
 };
 
 float dt;
-int count;
-int lastUseedParticle ;
-//int offset;
+uint count;
+int lastUsedParticle;
+
 RWStructuredBuffer<Particle> Particles;
 //RWStructuredBuffer<Particle> outParticles;
 float hash(float n) {
@@ -50,62 +51,40 @@ float SmoothStepC1(float t) {
 [numthreads(256,1,1)]
 void Update(uint3 id : SV_DispatchThreadID)
 {
-	idx = id.x;
-	Particles[idx].ageAndlife.y = duration;
-	if (idx < count) {
-		Particles[idx].ageAndlife.x += cbLifeDecay * dt;
-		if (Particles[idx].ageAndlife.x < 0) {
-			return;
-		}
-		else if (Particles[idx].ageAndlife.x > Particles[idx].ageAndlife.y) {
-			Particles[idx].ageAndlife.x = 0;
-			Particles[idx].velocity = float4(Particles[idx].initialVelocity.xyz * startSpeed, 1.0);
-			Particles[idx].position = EmitterPosition;
-			return;
-		}
-		float Interlop = SmoothStepC1(Particles[idx].ageAndlife.x / Particles[idx].ageAndlife.y);
-		//particles[id.x].massAndSize.y = lerp(cbStartSize, cbEndSize, Interlop);
-		//float Interlop = 1-Particles[id.x].ageAndlife.x / Particles[id.x].ageAndlife.y;
-		Particles[idx].color = lerp(cbStartColor, cbEndColor, Interlop);//*particle.ambient;
-		Particles[idx].psize = lerp(cbStartSize, 0, Interlop);
+	int idx = id.x;
+	if (idx < cbParticlesStorage) {
+		Particle particle = Particles[idx];
+		particle.ageAndlife.x -= dt * cbLifeDecay;
+		if (particle.ageAndlife.x >= 0) {
+			float Interlop = SmoothStepC1(1-particle.ageAndlife.x / duration);
+			particle.color = lerp(cbStartColor, cbEndColor, Interlop);
+			particle.psize = lerp(cbStartSize, 0, Interlop);
 
-		float3 noiseVelocity = float3(0, 0, 0);
-		float3 combineForce = float3(0, 0, 0);
-
-		//for(int i=0;i<num)
-		float3 dir = Particles[idx].position.xyz - forceCenter;
-		float distanceToForceCenter = length(dir);
-		dir = dir / distanceToForceCenter;
-		// radius=5
-		//float decay = clamp(1 - distanceToForceCenter / 5.0, 0, 1);
-		//decay = decay == 0 ? 0 : exp(log(decay))*0.05; //forcedecay
-		//float3 strength 当作是float3(1,1,1)
-		//combineForce += dir*10;
-		Particles[idx].velocity.xyz += combineForce * dt + gravity * 10 * float3(0, -1, 0) * dt;
-		Particles[idx].position.xyz += Particles[idx].velocity.xyz * dt; //+ gravity* Particles[id.x].ageAndlife.x *10*dt*float3(0,-1,0);//+ noiseVelocity * dt
+			float3 noiceVelocity = float3(0, 0, 0);
+			float3 combineForce = float3(0, 0, 0);    //
+			float3 dir = particle.position.xyz - forceCenter;
+			dir = normalize(dir);
+			particle.velocity.xyz += combineForce * dt + gravity * 10 * float3(0, -1, 0) * dt;
+			particle.position.xyz += particle.velocity.xyz * dt;
+			Particles[idx] = particle;
+		}
 	}
+ 
 }
 [numthreads(256, 1, 1)]
 void emitter(uint3 id : SV_DispatchThreadID)
-{
-	int idx = (lastUseedParticle+id.x)% cbParticlesStorage;
-	if (Particles[idx].ageAndlife.x <= 0.0f) {
-		
-	}
-	if (idx < count) {
-		float seed = _ID / (float)cbParticlesStorage;
+{	
+	int idx = (lastUsedParticle+id.x)% cbParticlesStorage;
+	if (id.x < count) {
+		Particle particle = Particles[idx];
+		float seed = (idx+11)/ (float)cbParticlesStorage;
 		float3 valueNoise;
 		valueNoise = UniformSinRandom(float3(seed, 0, seed * 2));
 		valueNoise = float3(valueNoise.x, 1, valueNoise.z);
 		valueNoise = normalize(valueNoise);
-		Particles[_ID].initialVelocity = float4(valueNoise, 1.0);
-		Particles[_ID].velocity = float4(valueNoise * startSpeed, 1.0);
-
-		//position
-		Particles[_ID].position = EmitterPosition;
-		Particles[_ID].initialPosition = Particles[_ID].position;
-
-		Particles[_ID].ageAndlife.x = 0;
-		Particles[_ID].ageAndlife.y = duration;
+		particle.velocity = float4(valueNoise * startSpeed, 1.0);
+		particle.position = EmitterPosition;
+		particle.ageAndlife.x = duration;
+		Particles[idx] = particle;
 	}
 }
