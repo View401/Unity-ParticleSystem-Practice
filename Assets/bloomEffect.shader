@@ -7,6 +7,7 @@ Shader "Unlit/bloomEffect"
         _MainTex ("Texture", 2D) = "white" {}
         _BlurTex("Blur",2D)="white"{}
     }
+       
     CGINCLUDE
     #include "UnityCG.cginc"
     struct v2f_threshold{
@@ -45,10 +46,15 @@ Shader "Unlit/bloomEffect"
     }
     fixed4 frag_threshold(v2f_threshold i) :SV_Target{
         fixed4 color = tex2D(_MainTex,i.uv);
-        return saturate(color - _colorThreshold);
+    //return color;
+        if (dot(color.xyz, fixed3(0.3, 0.59, 0.11) > _colorThreshold.x)) {
+            return color;
+        }
+        return fixed4(0,0,0,1);
     }
     v2f_blur vert_blur(appdata_img v){
         v2f_blur o;
+        _offsets *= _MainTex_TexelSize.xyxy;
         o.pos = UnityObjectToClipPos(v.vertex);
         o.uv = v.texcoord.xy;
 
@@ -60,7 +66,7 @@ Shader "Unlit/bloomEffect"
     }
     fixed4 frag_blur(v2f_blur i) :SV_Target{
         fixed4 color = fixed4(0,0,0,0);
-        color += 0.4 * tex2D(_MainTex, i.uv01.xy);
+        color += 0.4 * tex2D(_MainTex, i.uv);
         color += 0.15 * tex2D(_MainTex, i.uv01.xy);
         color += 0.15 * tex2D(_MainTex, i.uv01.zw);
         color += 0.1 * tex2D(_MainTex, i.uv23.xy);
@@ -81,7 +87,9 @@ Shader "Unlit/bloomEffect"
         fixed4 ori = tex2D(_MainTex,i.uv);
         fixed4 blur = tex2D(_BlurTex, i.uv);
         
-        fixed4 color = ori + _bloomFactor * blur * _bloomColor;
+        fixed4 color = ori +_bloomFactor * blur;
+       // color = fixed4(1, 0, 0, 0);
+        
         return color;
     }
         ENDCG
@@ -94,7 +102,7 @@ Shader "Unlit/bloomEffect"
             Cull Off
             ZWrite Off
             Fog{Mode Off}
-
+             Blend Off
             CGPROGRAM
             #pragma vertex vert_threshold
             #pragma fragment frag_threshold

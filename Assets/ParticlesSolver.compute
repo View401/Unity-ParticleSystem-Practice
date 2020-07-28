@@ -1,6 +1,6 @@
 ﻿#pragma kernel Update
 #pragma kernel emitter
-#pragma kernel blur
+
 #include "CgIncludes/SimplexNoise3D.cginc"
 float4 cbStartColor;
 float4 cbEndColor;
@@ -74,7 +74,7 @@ void Update(uint3 id : SV_DispatchThreadID)
 [numthreads(256, 1, 1)]
 void emitter(uint3 id : SV_DispatchThreadID)
 {	
-	int idx = (lastUsedParticle+id.x)% cbParticlesStorage;
+	int idx = (lastUsedParticle+id.x)% 2560;
 	if (id.x < count) {
 		Particle particle = Particles[idx];
 		float seed = (idx+11)/ (float)cbParticlesStorage;

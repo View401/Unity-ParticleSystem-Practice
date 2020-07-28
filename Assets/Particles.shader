@@ -49,6 +49,7 @@ Shader "Subway/Particles"
 			};
 			struct appdata {
 				float4 vertex:POSITION;
+				float4 normal:NORMAL;
 			};
             // Pixel shader input
             struct PS_INPUT
@@ -84,11 +85,14 @@ Shader "Subway/Particles"
                 // Color
                 //float speed = length(Particles[instance_id].velocity);
                 //float lerpValue = clamp(speed / _HighSpeedValue, 0.0f, 1.0f);
-                o.color = Particles[instance_id].color;
+				particleCacheProperty particle = Particles[instance_id];
+                o.color = particle.color;
                 // Position
                 //o.position = UnityObjectToClipPos(float4(Particles[instance_id].position.xyz,1.0));
-				_size = Particles[instance_id].psize;
-				float4x4 WorldMatrix = GetModelToWorldMatrix(Particles[instance_id].position.xyz);
+				_size = particle.psize;
+				float4x4 WorldMatrix = GetModelToWorldMatrix(particle.position.xyz);
+				float3 objViewDir = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1));
+				float3 normalDir
 				v.vertex = mul(WorldMatrix, v.vertex);
 				o.position = mul(UNITY_MATRIX_VP, v.vertex);
 				//o.initialVelocity = Particles[instance_id].initialVelocity;

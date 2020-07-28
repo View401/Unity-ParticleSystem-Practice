@@ -47,13 +47,17 @@ public class ParticlesManager : MonoBehaviour {
     float emitterPerSec;
     float residuals;
     uint[] _args = new uint[5] { 0, 0, 0, 0, 0 };
+    void Awake()
+    {
+        Application.targetFrameRate = 60;
+    }
     // Use this for initialization
     void Start () {
 
         //warpCount = Mathf.CeilToInt((float)size / WARP_SIZE);
 
         stride = Marshal.SizeOf(typeof(Particle));
-        startColor = new Color(0,0,1,1);
+       // startColor = new Color(0,0,1,1);
         endColor = Color.red;
         size = 2560;
         initSize = size;
@@ -71,9 +75,16 @@ public class ParticlesManager : MonoBehaviour {
         kernelIndex = computeShader.FindKernel("emitter");
         kernelIndexUpdate = computeShader.FindKernel("Update");
 
-
+        computeShader.SetBuffer(kernelIndex, "Particles", particles);
+        computeShader.SetBuffer(kernelIndexUpdate, "Particles", particles);
         //computeShader.SetFloat("cbEndSize", 0.5f);
-        
+        material.SetBuffer("Particles", particles);
+        _args[0] = (uint)instanceMesh.GetIndexCount(0);
+        _args[1] = (uint)2560;
+        _args[2] = (uint)instanceMesh.GetIndexStart(0);
+        _args[3] = (uint)instanceMesh.GetBaseVertex(0);
+        argsBuffer.SetData(_args);
+        emitterPerSec = size / duration * lifeDecay;
     }
 	
 	// Update is called once per frame
@@ -87,12 +98,12 @@ public class ParticlesManager : MonoBehaviour {
             residuals = 0;
         }
         computeShader.SetInt("lastUsedParticle", lastUsedParticle);
-        emitterPerSec = size / duration*lifeDecay;
+      
         float dt = Time.deltaTime;
         residuals += dt * emitterPerSec;
         int newPaticles = Mathf.FloorToInt(residuals);
         residuals -= newPaticles;
-        Debug.Log(newPaticles);
+        //Debug.Log(newPaticles);
         computeShader.SetFloat("dt", dt);
         computeShader.SetFloats("EmitterPosition", new float[] { transform.position.x, transform.position.y, transform.position.z, 1f });
         computeShader.SetFloat("gravity", gravity);
@@ -105,34 +116,31 @@ public class ParticlesManager : MonoBehaviour {
         computeShader.SetFloat("duration", duration);            //重新发射
         
         computeShader.SetInt("count", newPaticles);
-        computeShader.SetBuffer(kernelIndex, "Particles", particles);
-        computeShader.SetBuffer(kernelIndexUpdate, "Particles", particles);
-        
+
+        Vector
         if (newPaticles > 0) {
             if (particleCount < size)
             {
-                particleCount += Mathf.Min(newPaticles,size-particleCount);
+                particleCount +=  Mathf.Min(newPaticles,size-particleCount);
+          
             }
-            Debug.Log("lastUsedParticles:" + lastUsedParticle);
+           // Debug.Log("lastUsedParticles:" + lastUsedParticle);
             lastUsedParticle = (lastUsedParticle + newPaticles ) % size;
             
             warpCount = Mathf.CeilToInt(newPaticles / 256.0f);
             computeShader.Dispatch(kernelIndex, warpCount, 1, 1);
         }
 
-        Debug.Log(dt);
-        Debug.Log(particleCount);
+      //  Debug.Log(dt);
+       // Debug.Log("ParticleCount "+particleCount);
         warpCount = Mathf.CeilToInt(particleCount / 256.0f);
         computeShader.SetInt("cbParticlesStorage", particleCount);
         if(particleCount>0)
             computeShader.Dispatch(kernelIndexUpdate, warpCount, 1, 1);
-        _args[0] = (uint)instanceMesh.GetIndexCount(0);
-        _args[1] = (uint)particleCount;
-        _args[2] = (uint)instanceMesh.GetIndexStart(0);
-        _args[3] = (uint)instanceMesh.GetBaseVertex(0);
-        argsBuffer.SetData(_args);
-        material.SetBuffer("Particles", particles);
+      
+       
         Graphics.DrawMeshInstancedIndirect(instanceMesh, 0, material, new Bounds(Vector3.zero,new Vector3(100f,100f,100f)),argsBuffer);
+       // Debug.Log(lastUsedParticle);
     }
 
     void OnRenderObject()
