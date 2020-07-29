@@ -152,10 +152,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: c4e4f6fd603d22346b826ac950ec9f0f, type: 3}
   material: {fileID: 2100000, guid: 45ccd2d11e7b86c4f84a169e49169eb3, type: 2}
-  instanceMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
-  startSize: 0.01
-  startColor: {r: 0, g: 0, b: 0, a: 0}
-  endColor: {r: 0, g: 0, b: 0, a: 0}
+  instanceMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  startSize: 0.07
+  startColor: {r: 0.9811321, g: 0.0786757, b: 0.0786757, a: 1}
+  endColor: {r: 0.8867924, g: 0.17150229, b: 0.17150229, a: 1}
   gravity: 0.5
   startSpeed: 1
   size: 2560
@@ -191,6 +191,7 @@ GameObject:
   - component: {fileID: 904031185}
   - component: {fileID: 904031184}
   - component: {fileID: 904031183}
+  - component: {fileID: 904031187}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -224,7 +225,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.46274513, g: 0.46274513, b: 0.46274513, a: 0}
+  m_BackGroundColor: {r: 0.122641504, g: 0.11280704, b: 0.11280704, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -271,3 +272,20 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &904031187
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 904031182}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9cf1acb1f8380e42a24777150c3857d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  shader: {fileID: 4800000, guid: c0ad37a028512f24c99de881e057df36, type: 3}
+  downSample: 1
+  sampleScale: 1
+  colorThreshold: 0.5
+  bloomFactor: 0.5

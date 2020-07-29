@@ -2,6 +2,10 @@
 
 // Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
 
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
 Shader "Subway/Particles"
 {
 
@@ -49,7 +53,6 @@ Shader "Subway/Particles"
 			};
 			struct appdata {
 				float4 vertex:POSITION;
-				float4 normal:NORMAL;
 			};
             // Pixel shader input
             struct PS_INPUT
@@ -82,21 +85,22 @@ Shader "Subway/Particles"
             {
 				PS_INPUT o = (PS_INPUT)0;
 
-                // Color
-                //float speed = length(Particles[instance_id].velocity);
-                //float lerpValue = clamp(speed / _HighSpeedValue, 0.0f, 1.0f);
 				particleCacheProperty particle = Particles[instance_id];
+                // Color
                 o.color = particle.color;
                 // Position
                 //o.position = UnityObjectToClipPos(float4(Particles[instance_id].position.xyz,1.0));
 				_size = particle.psize;
 				float4x4 WorldMatrix = GetModelToWorldMatrix(particle.position.xyz);
-				float3 objViewDir = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1));
-				float3 normalDir
-				v.vertex = mul(WorldMatrix, v.vertex);
-				o.position = mul(UNITY_MATRIX_VP, v.vertex);
-				//o.initialVelocity = Particles[instance_id].initialVelocity;
-				//o.initialPosition = Particles[instance_id].initialPosition;
+				
+				float3 objViewDir = -mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1));
+				float3 normalDir = normalize(objViewDir);
+				float3 upDir = float3(0, 1, 0);
+				float3 rightDir = normalize(cross(normalDir, upDir));
+				upDir = normalize(cross(normalDir, rightDir));
+				float3 localPos = rightDir * v.vertex.x + upDir * v.vertex.y + normalDir * v.vertex.z;
+				o.position= mul(WorldMatrix, float4(localPos, 1));
+				o.position = mul(UNITY_MATRIX_VP,o.position);
 
                 return o;
             }

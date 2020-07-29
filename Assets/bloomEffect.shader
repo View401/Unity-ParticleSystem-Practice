@@ -31,7 +31,7 @@ Shader "Unlit/bloomEffect"
     sampler2D _BlurTex;
     float4 _BlurTex_TexelSize;
     float4 _offsets;
-    float4 _colorThreshold;
+    float _colorThreshold;
     float4 _bloomColor;
     float _bloomFactor;
 
@@ -46,8 +46,10 @@ Shader "Unlit/bloomEffect"
     }
     fixed4 frag_threshold(v2f_threshold i) :SV_Target{
         fixed4 color = tex2D(_MainTex,i.uv);
-    //return color;
-        if (dot(color.xyz, fixed3(0.3, 0.59, 0.11) > _colorThreshold.x)) {
+        //return color;
+        //if (dot(color.rgb, fixed3(0.3, 0.59, 0.11) > _colorThreshold)) {
+        float lightness = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
+        if(lightness>_colorThreshold){
             return color;
         }
         return fixed4(0,0,0,1);
